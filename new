@@ -1,1 +1,62 @@
-yes
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+
+const app = express();
+const PORT = 5000;
+
+app.use(cors());
+
+app.get('/proxy', async (req, res) => {
+    const videoUrl = req.query.url;
+    if (!videoUrl) return res.status(400).send('URL is required');
+
+    try {
+        const response = await axios.get(videoUrl, { responseType: 'arraybuffer' });
+        
+        // Pass the correct HLS content type
+        res.set('Content-Type', 'application/vnd.apple.mpegurl');
+        res.send(response.data);
+    } catch (error) {
+        res.status(500).send('Error proxying the video');
+    }
+});
+
+app.listen(PORT, () => {
+    console.log(`Proxy running on http://localhost:${PORT}`);
+});
+import React, { useState } from 'react';
+import ReactPlayer from 'react-player';
+
+function App() {
+    // Replace with your direct m3u8 stream link
+    const targetUrl = 'https://akamaihd.net';
+    
+    // Pass the raw URL through our local Node.js proxy to avoid CORS
+    const proxiedUrl = `http://localhost:5000/proxy?url=${encodeURIComponent(targetUrl)}`;
+
+    return (
+        <div style={{ padding: '20px', fontFamily: 'Arial' }}>
+            <h2>M3U8 Video Player with Local Proxy</h2>
+            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                <ReactPlayer
+                    url={proxiedUrl}
+                    controls={true}
+                    width="100%"
+                    height="auto"
+                    config={{
+                        file: {
+                            forceHLS: true, // Forces hls.js parsing
+                            attributes: {
+                                crossOrigin: 'anonymous'
+                            }
+                        }
+                    }}
+                />
+            </div>
+        </div>
+    );
+}
+
+export default App;
+
